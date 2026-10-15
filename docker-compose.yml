@@ -8,12 +8,9 @@
 # into the registry explicitly below so the tunnel token never enters it.
 services:
   registry:
-    # Built on the box: `docker compose build` (4 GB RAM is enough)
-    image: woblet/pesde-registry:0.2.3
-    build:
-      context: .
-      args:
-        PESDE_TAG: v0.7.4+registry.0.2.3
+    # Built by .github/workflows/build.yml and pulled from GHCR (public
+    # package, no login). The tag must match PESDE_TAG in the Dockerfile.
+    image: ghcr.io/wobletstudios/pesde-registry:0.2.3
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080" # operator side door on the box; the public path is the tunnel

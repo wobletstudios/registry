@@ -1,0 +1,49 @@
+# Builds the registry image on GitHub and pushes it to GHCR so the VPS only
+# pulls. PESDE_TAG is read from the Dockerfile's ARG default: bump it there
+# (and the image tag in docker-compose.yml), push, wait for green, then
+# `docker compose --profile prod pull && docker compose --profile prod up -d`.
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .github/workflows/build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Read pinned version from Dockerfile
+        run: |
+          tag=$(sed -n 's/^ARG PESDE_TAG=//p' Dockerfile)
+          test -n "$tag"
+          echo "PESDE_TAG=$tag" >> "$GITHUB_ENV"
+          echo "REGISTRY_VERSION=${tag##*registry.}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: PESDE_TAG=${{ env.PESDE_TAG }}
+          tags: |
+            ghcr.io/wobletstudios/pesde-registry:${{ env.REGISTRY_VERSION }}
+            ghcr.io/wobletstudios/pesde-registry:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

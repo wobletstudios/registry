@@ -12,11 +12,12 @@ repos' `rokit.toml` and `PESDE_TAG` here together.
 ## Layout
 
 - `Dockerfile` - two-stage build of `pesde-registry` from the upstream tag
+- `.github/workflows/build.yml` - builds the Dockerfile on push and pushes
+  `ghcr.io/wobletstudios/pesde-registry:<version>` (public package)
 - `docker-compose.yml` - `registry` (loopback 8080) + `cloudflared` (prod profile)
 - `.env.example` - every variable, with where each value comes from
 
-The image is built on the VPS itself (`docker compose build`); there is no
-registry of images to log in to.
+The VPS never compiles anything; it pulls the image GitHub Actions built.
 
 ## First deploy
 
@@ -28,8 +29,8 @@ registry of images to log in to.
 3. GitHub: fine-grained PAT scoped to `pesde-index`, Contents read/write.
 4. On the VPS: `git clone` this repo, `cp .env.example .env`, fill it in,
    `chmod 600 .env`. Tokens: `openssl rand -hex 32` twice.
-5. `docker compose --profile prod up -d --build`. The first build compiles
-   the registry from source and takes several minutes.
+5. `docker compose --profile prod pull && docker compose --profile prod up -d`.
+   The image must already exist on GHCR (green `build` run on Actions).
 6. Check: `docker compose logs registry` shows the index cloned; the tunnel
    is healthy in the dashboard; `curl -I https://registry.woblet.gg/`
    answers from the app, not a Cloudflare 502/530.
@@ -49,8 +50,9 @@ Projects pin the index in their own `pesde.toml`:
 ## Runbook
 
 - **Upgrade**: bump `PESDE_TAG` in `Dockerfile` and the image tag in
-  `docker-compose.yml`; push; on the VPS `git pull` then
-  `docker compose --profile prod up -d --build`.
+  `docker-compose.yml`; push; wait for the `build` workflow to go green;
+  on the VPS `git pull`, `docker compose --profile prod pull`,
+  `docker compose --profile prod up -d`.
 - **Rotate a token**: edit `.env`, `docker compose up -d` (recreates the
   container), then every holder re-runs `pesde auth login`. Rotating the
   read token logs out all teammates and CI; do it rarely.
