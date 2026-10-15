@@ -1,0 +1,48 @@
+# woblet pesde registry. Mirrors analytics/vps: every service is loopback or
+# compose-network only; the only inbound path is the Cloudflare Tunnel.
+#
+#   docker compose up -d                  local / first smoke test (no tunnel)
+#   docker compose --profile prod up -d   VPS, with the tunnel
+#
+# Secrets come from ./.env (gitignored, see .env.example). They are mapped
+# into the registry explicitly below so the tunnel token never enters it.
+services:
+  registry:
+    # Built on the box: `docker compose build` (4 GB RAM is enough)
+    image: woblet/pesde-registry:0.2.3
+    build:
+      context: .
+      args:
+        PESDE_TAG: v0.7.4+registry.0.2.3
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080" # operator side door on the box; the public path is the tunnel
+    environment:
+      INDEX_REPO_URL: ${INDEX_REPO_URL:?.env missing INDEX_REPO_URL}
+      GIT_USERNAME: ${GIT_USERNAME:?.env missing GIT_USERNAME}
+      GIT_PASSWORD: ${GIT_PASSWORD:?.env missing GIT_PASSWORD}
+      COMMITTER_GIT_NAME: ${COMMITTER_GIT_NAME:?.env missing COMMITTER_GIT_NAME}
+      COMMITTER_GIT_EMAIL: ${COMMITTER_GIT_EMAIL:?.env missing COMMITTER_GIT_EMAIL}
+      # Read/write token mode: reads always require the read token, so
+      # READ_NEEDS_AUTH is not needed. Tokens are any string; the server
+      # stores only their SHA-256.
+      READ_ACCESS_TOKEN: ${READ_ACCESS_TOKEN:?.env missing READ_ACCESS_TOKEN}
+      WRITE_ACCESS_TOKEN: ${WRITE_ACCESS_TOKEN:?.env missing WRITE_ACCESS_TOKEN}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    volumes:
+      - registry-data:/var/lib/pesde-registry
+
+  # Prod only: outbound-only tunnel to Cloudflare's edge. The public hostname
+  # (registry.woblet.gg -> http://registry:8080) is configured on the tunnel
+  # in the Zero Trust dashboard, not here. CF_TUNNEL_TOKEN is deliberately
+  # not a required variable so local runs without it still start.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    profiles: ["prod"]
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN:-}
+    depends_on:
+      - registry
+
+volumes:
+  registry-data:

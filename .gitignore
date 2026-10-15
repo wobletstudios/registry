@@ -1,0 +1,2 @@
+# Deployment secrets live only on the VPS
+.env
