@@ -9,6 +9,13 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 RUN git clone --depth 1 --branch "$PESDE_TAG" https://github.com/pesde-pkg/pesde.git /src
 WORKDIR /src
+# Upstream bug (pesde-pkg/pesde#79): FS storage sends `Content-Encoding: gzip`
+# on archives whose body IS the gzip. Cloudflare decompresses it for clients
+# that do not advertise gzip, and the pesde CLI then fails with "Invalid gzip
+# header". Drop that header line before building. Remove once upstream fixes it.
+RUN sed -i '/CONTENT_ENCODING, "gzip"/d' registry/src/storage/fs.rs \
+    && sed -i 's/{CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_TYPE}/{CONTENT_LENGTH, CONTENT_TYPE}/' registry/src/storage/fs.rs \
+    && ! grep -q CONTENT_ENCODING registry/src/storage/fs.rs
 RUN cargo build --release -p pesde-registry
 
 FROM debian:bookworm-slim
