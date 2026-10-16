@@ -15,7 +15,7 @@ Pinned: pesde `v0.7.4+registry.0.2.3`.
 
 ## Clients
 
-    pesde auth login --index https://github.com/wobletstudios/pesde-index --token <token>
+    pesde auth --index https://github.com/wobletstudios/pesde-index login --token <token>
 
 ## Runbook
 
