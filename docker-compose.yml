@@ -25,7 +25,6 @@ services:
       # stores only their SHA-256.
       READ_ACCESS_TOKEN: ${READ_ACCESS_TOKEN:?.env missing READ_ACCESS_TOKEN}
       WRITE_ACCESS_TOKEN: ${WRITE_ACCESS_TOKEN:?.env missing WRITE_ACCESS_TOKEN}
-      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - registry-data:/var/lib/pesde-registry
 
