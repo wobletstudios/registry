@@ -1,7 +1,4 @@
-# Builds the registry image on GitHub and pushes it to GHCR so the VPS only
-# pulls. PESDE_TAG is read from the Dockerfile's ARG default: bump it there
-# (and the image tag in docker-compose.yml), push, wait for green, then
-# `docker compose --profile prod pull && docker compose --profile prod up -d`.
+# Builds the Dockerfile and pushes it to GHCR. PESDE_TAG comes from the Dockerfile.
 name: build
 
 on:
